@@ -2,36 +2,27 @@
 
 ---
 coreos:
-  etcd:
-    addr: $public_ipv4:4001
-    peer-addr: $public_ipv4:7001
-    discovery: https://discovery.etcd.io/18855e1d4641395dbadb611c6a05df28
   etcd2:
     advertise-client-urls: http://$public_ipv4:2379
     initial-advertise-peer-urls: http://$private_ipv4:2380
     listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
     listen-peer-urls: http://$private_ipv4:2380,http://$private_ipv4:7001
-    discovery: https://discovery.etcd.io/18855e1d4641395dbadb611c6a05df28
+    discovery: https://discovery.etcd.io/7fcecebfa556f7663438baa58eab318d
   fleet:
-    public-ip: $public_ipv4
+    public-ip: "$public_ipv4"
   flannel:
-    interface: $public_ipv4
+    interface: "$public_ipv4"
   units:
-  - name: disable_thp.service
-    command: start
-    enable: true
-    content: |
-      [Unit]
-      Description=Disable Transparent Huge Pages in the kernel
-
-      [Service]
-      ExecStart=/bin/sh -c "/usr/bin/echo never > /sys/kernel/mm/transparent_hugepage/enabled"
-      ExecStop="/usr/bin/echo"
-  - name: etcd.service
+  - name: etcd2.service
     command: start
   - name: fleet.service
     command: start
   - name: flanneld.service
+    drop-ins:
+    - name: 50-network-config.conf
+      content: |
+        [Service]
+        ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{ "Network": "10.1.0.0/16" }'
     command: start
   - name: docker-tcp.socket
     command: start
@@ -47,9 +38,3 @@ coreos:
 
       [Install]
       WantedBy=sockets.target
-write_files:
-- path: /tmp/test
-  permissions: '0644'
-  owner: root
-  content: |
-    never

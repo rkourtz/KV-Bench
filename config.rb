@@ -1,12 +1,11 @@
 # Size of the CoreOS cluster created by Vagrant
-$num_instances=1
+$num_instances=3
 
 # Used to fetch a new discovery token for a cluster of size $num_instances
 $new_discovery_url="https://discovery.etcd.io/new?size=#{$num_instances}"
 
-# To automatically replace the discovery token on 'vagrant up', uncomment
-# the lines below:
-#
+# Automatically replace the discovery token on 'vagrant up'
+
 if File.exists?('user-data') && ARGV[0].eql?('up')
   require 'open-uri'
   require 'yaml'
@@ -14,26 +13,25 @@ if File.exists?('user-data') && ARGV[0].eql?('up')
   token = open($new_discovery_url).read
 
   data = YAML.load(IO.readlines('user-data')[1..-1].join)
-  if data['coreos'].key? 'etcd'
+
+  if data.key? 'coreos' and data['coreos'].key? 'etcd'
     data['coreos']['etcd']['discovery'] = token
   end
-  if data['coreos'].key? 'etcd2'
+
+  if data.key? 'coreos' and data['coreos'].key? 'etcd2'
     data['coreos']['etcd2']['discovery'] = token
   end
 
   # Fix for YAML.load() converting reboot-strategy from 'off' to `false`
-  if data['coreos'].key? 'update'
-     if data['coreos']['update'].key? 'reboot-strategy'
-        if data['coreos']['update']['reboot-strategy'] == false
-           data['coreos']['update']['reboot-strategy'] = 'off'
-        end
-     end
+  if data.key? 'coreos' and data['coreos'].key? 'update' and data['coreos']['update'].key? 'reboot-strategy'
+    if data['coreos']['update']['reboot-strategy'] == false
+      data['coreos']['update']['reboot-strategy'] = 'off'
+    end
   end
 
   yaml = YAML.dump(data)
   File.open('user-data', 'w') { |file| file.write("#cloud-config\n\n#{yaml}") }
 end
-#
 
 #
 # coreos-vagrant is configured through a series of configuration
@@ -45,10 +43,10 @@ end
 # Change basename of the VM
 # The default value is "core", which results in VMs named starting with
 # "core-01" through to "core-${num_instances}".
-$instance_name_prefix="core"
+#$instance_name_prefix="core"
 
 # Change the version of CoreOS to be installed
-# To deploy a specific version, simply set $image_version accordingly. 
+# To deploy a specific version, simply set $image_version accordingly.
 # For example, to deploy version 709.0.0, set $image_version="709.0.0".
 # The default value is "current", which points to the current version
 # of the selected channel
@@ -79,6 +77,7 @@ $instance_name_prefix="core"
 #$vm_gui = false
 #$vm_memory = 1024
 #$vm_cpus = 1
+#$vb_cpuexecutioncap = 100
 
 # Share additional folders to the CoreOS VMs
 # For example,
@@ -86,6 +85,7 @@ $instance_name_prefix="core"
 # or, to map host folders to guest folders of the same name,
 # $shared_folders = Hash[*['/home/foo/app1', '/home/foo/app2'].map{|d| [d, d]}.flatten]
 #$shared_folders = {}
+$shared_folders = {'/Users/richardkourtz/workspace' => '/workspace', '.' => '/vagrant'}
 
 # Enable port forwarding from guest(s) to host machine, syntax is: { 80 => 8080 }, auto correction is enabled by default.
 #$forwarded_ports = {}
