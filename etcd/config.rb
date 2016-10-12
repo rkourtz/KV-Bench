@@ -85,7 +85,7 @@ end
 # or, to map host folders to guest folders of the same name,
 # $shared_folders = Hash[*['/home/foo/app1', '/home/foo/app2'].map{|d| [d, d]}.flatten]
 #$shared_folders = {}
-$shared_folders = {'/Users/richardkourtz/workspace' => '/workspace', '.' => '/vagrant'}
+#$shared_folders = {'/Users/richardkourtz/workspace' => '/workspace', '.' => '/vagrant'}
 
 # Enable port forwarding from guest(s) to host machine, syntax is: { 80 => 8080 }, auto correction is enabled by default.
 #$forwarded_ports = {}

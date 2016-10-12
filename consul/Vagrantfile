@@ -1,0 +1,45 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+require 'fileutils'
+require 'open-uri'
+
+$num_instances = 3
+$instance_name_prefix = "c"
+$consul_package = "https://releases.hashicorp.com/consul/0.7.0/consul_0.7.0_linux_amd64.zip"
+
+['vagrant-alpine'].each do |plugin|
+  unless Vagrant.has_plugin?(plugin)
+    raise "Plugin %s is not installed.\nInstall using 'vagrant plugin install %s'" % [plugin, plugin]
+  end
+end
+if not File.exists?('consul')
+	open('consul.zip', 'wb') do |file|
+  		file << open($consul_package).read
+	end
+end
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "maier/alpine-3.4-x86_64"
+
+  config.vm.provider :virtualbox do |v|
+    v.check_guest_additions = false
+    v.functional_vboxsf     = false
+  end
+
+  (0..$num_instances-1).each do |i|
+    config.vm.define vm_name = "%s%d" % [$instance_name_prefix, i] do |config|
+      config.vm.hostname = vm_name
+      ip = "192.168.33.#{i+60}"
+      config.vm.network :private_network, ip: ip
+      config.vm.synced_folder ".", "/vagrant"
+      config.vm.provision :shell, :inline => "[ -f 'consul' ] || unzip /vagrant/consul.zip"
+      if i == 0
+      	consul_master = ip
+      	config.vm.provision :shell, :inline => "./consul agent -server -data-dir /tmp/consul -bind %s -bootstrap-expect=2 &> /var/log/consul.log &" % [ ip ]
+      else
+      	config.vm.provision :shell, :inline => "./consul agent -server -data-dir /tmp/consul -bind %s -retry-join %s &> /var/log/consul.log &" % [ip, consul_master]
+      end
+   end
+  end
+end

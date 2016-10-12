@@ -6,6 +6,7 @@ import etcd
 import json
 import random
 import string
+import sys
 import threading
 import time
 
@@ -153,7 +154,12 @@ class main(object):
     def stopLoad(self):
         self.run_load = False
         
-            
+class consulTest(main):
+    def __init__(self, args):
+        print "TBD"
+        sys.exit(2)
+        super(etcdTest, self).__init__(args)
+           
             
         
 class etcdTest(main):
