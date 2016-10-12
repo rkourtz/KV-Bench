@@ -37,5 +37,5 @@ vagrant up
 
 python $DIR/benchmark.py $DEBUG $PLATFORM
 
-vagrant destroy
+vagrant destroy --force
 
