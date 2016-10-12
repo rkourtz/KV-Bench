@@ -7,15 +7,20 @@ require 'open-uri'
 $num_instances = 3
 $instance_name_prefix = "c"
 $consul_package = "https://releases.hashicorp.com/consul/0.7.0/consul_0.7.0_linux_amd64.zip"
+$consul_zip = File.join([File.dirname(__FILE__), 'files', 'consul.zip'])
 
 ['vagrant-alpine'].each do |plugin|
   unless Vagrant.has_plugin?(plugin)
     raise "Plugin %s is not installed.\nInstall using 'vagrant plugin install %s'" % [plugin, plugin]
   end
 end
-if not File.exists?('consul')
-	open('consul.zip', 'wb') do |file|
-  		file << open($consul_package).read
+
+if ARGV[0] == "up"
+	if not File.exists?($consul_zip)
+		puts "Downloading %s" % $consul_package
+		open($consul_zip, 'wb') do |file|
+	  		file << open($consul_package).read
+		end
 	end
 end
 
@@ -32,13 +37,14 @@ Vagrant.configure("2") do |config|
       config.vm.hostname = vm_name
       ip = "192.168.33.#{i+60}"
       config.vm.network :private_network, ip: ip
-      config.vm.synced_folder ".", "/vagrant"
-      config.vm.provision :shell, :inline => "[ -f 'consul' ] || unzip /vagrant/consul.zip"
+      config.vm.synced_folder ".", "/vagrant", disabled: true
+      config.vm.provision "file", source: $consul_zip, destination: "~/consul.zip"
+      config.vm.provision "file", source: File.join([File.dirname(__FILE__), 'files', 'consul_setup.sh']), destination: "~/consul_setup.sh"
+      config.vm.provision "shell", inline: "/home/vagrant/consul_setup.sh"
       if i == 0
-      	consul_master = ip
-      	config.vm.provision :shell, :inline => "./consul agent -server -data-dir /tmp/consul -bind %s -bootstrap-expect=2 &> /var/log/consul.log &" % [ ip ]
+      	config.vm.provision :shell, :inline => "/usr/local/bin/consul agent -server -data-dir /opt/consul -bind %s -bootstrap-expect=2 -client %s -pid-file /run/consul/agent.pid -syslog &> consul.log &" % [ ip, ip ]
       else
-      	config.vm.provision :shell, :inline => "./consul agent -server -data-dir /tmp/consul -bind %s -retry-join %s &> /var/log/consul.log &" % [ip, consul_master]
+      	config.vm.provision :shell, :inline => "/usr/local/bin/consul agent -server -data-dir /opt/consul -bind %s -retry-join 192.168.33.60 -client %s -pid-file /run/consul/agent.pid -syslog &> consul.log &" % [ip, ip]
       end
    end
   end

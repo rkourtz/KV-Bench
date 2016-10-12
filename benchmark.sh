@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e 
-set -x
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # SETUP DEVELOPMENT ENVIRONMENT
@@ -9,14 +8,20 @@ if [ ! -d "$DIR/python" ];
 then
   cd $DIR
   virtualenv python
+  source $PWD/python/bin/activate
   pip install -r requirements.txt
+else
+  source $PWD/python/bin/activate
 fi
-source $PWD/python/bin/activate
 
 which vagrant &>/dev/null || echo "You must install vagrant (www.vagrantup.com) to continue" || exit 1
 vagrant plugin list | grep vagrant-alpine &> /dev/null || vagrant plugin install vagrant-alpine
 
-
+if [ "$1" == "--debug" ];
+then
+	DEBUG=$1
+	shift
+fi 
 PLATFORM=$1
 if [ "${#PLATFORM}" -eq 0 ];
 then
@@ -30,7 +35,7 @@ fi
 cd $DIR/$PLATFORM
 vagrant up
 
-python $DIR/benchmark.py $PLATFORM
+python $DIR/benchmark.py $DEBUG $PLATFORM
 
 vagrant destroy
 

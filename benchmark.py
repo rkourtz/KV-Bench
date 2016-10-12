@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-
 import argparse
+import consul
 import datetime
 import etcd
 import json
@@ -19,6 +18,9 @@ parser.add_argument("--keysize", dest="keysize", help="How many characters shoul
 parser.add_argument("--valuesize", dest="valuesize", help="How many characters should each value contain", type=int, default=25)
 parser.add_argument("--debug", dest="debug", action="store_true", help="Verbosity", default=False)
 subparsers = parser.add_subparsers(dest="target", help='Target KV stores')
+consul_parser = subparsers.add_parser('consul', help='run against consul')
+consul_parser.add_argument("--host", dest="host", help="Target host", default='192.168.33.60')
+consul_parser.add_argument("--port", dest="port", help="Target port", type=int, default=8500)
 etcd_parser = subparsers.add_parser('etcd', help='run against etcd')
 etcd_parser.add_argument("--host", dest="host", help="Target host", default='192.168.33.50')
 etcd_parser.add_argument("--port", dest="port", help="Target port", type=int, default=4001)
@@ -104,10 +106,7 @@ class main(object):
         return leaf_keys
     
     def makeKey(self, keys):
-        ret = "/".join(keys)
-        if ret[0] != "/":
-            return "/%s" % ret
-        return ret
+        raise NotImplementedError
     
     def startLoad(self, duration = None):
         def load(end_time):
@@ -135,8 +134,7 @@ class main(object):
                 if elapsed_time > 0 and elapsed_time % interval == 0:
                     curcount = self.load_count
                     self.load_count = 0
-                    if self.debug:
-                        print "Elapsed Time: %i\tRate: %i/second " % (elapsed_time, curcount / interval)
+                    print "Elapsed Time: %i\tRate: %i/second " % (elapsed_time, curcount / interval)
                     self.load_rate[elapsed_time] = int(curcount / interval)
                 time.sleep(1)
                   
@@ -156,16 +154,39 @@ class main(object):
         
 class consulTest(main):
     def __init__(self, args):
-        print "TBD"
-        sys.exit(2)
-        super(etcdTest, self).__init__(args)
-           
+        self.client = consul.Consul(host=args.host, port=args.port)
+        super(consulTest, self).__init__(args)
+    
+    def deleteAll(self):
+        if self.client.kv.get(self.base_key)[1] != None:
+            self.client.kv.delete(self.base_key, recurse=True)
+
+    def makeKey(self, keys):
+        return "/".join(keys)
+    
+    def read(self, key):
+        if isinstance(key, list):
+            key = self.makeKey(key)
+        return self.client.kv.get(key)[1]
+    
+    def write(self, key, value):
+        if isinstance(key, list):
+            key = self.makeKey(key)
+        start_time = datetime.datetime.now()
+        self.client.kv.put(key, value)
+        return (datetime.datetime.now() - start_time).microseconds
             
         
 class etcdTest(main):
     def __init__(self, args):
         self.client = etcd.Client(host=args.host, port=args.port)
         super(etcdTest, self).__init__(args)
+    
+    def makeKey(self, keys):
+        ret = "/".join(keys)
+        if ret[0] != "/":
+            return "/%s" % ret
+        return ret
     
     def printClusterData(self):
         children = []
@@ -186,13 +207,27 @@ class etcdTest(main):
             self.client.delete(self.makeKey([self.base_key]), recursive=True)
         except etcd.EtcdKeyNotFound:
             pass
+    def read(self, key):
+        if isinstance(key, list):
+            key = self.makeKey(key)
+        ret = self.client.read(key)
+        return ret.value
 
 if args.target == "etcd":
     cl = etcdTest(args)
+elif args.target == "consul":
+    cl = consulTest(args)
+else:
+    print "KV store %s is not supported by this tool." % args.target
+    sys.exit(1)
 print "Keys: %i" % cl.key_count
 for i in range(3):
-    cl.deleteAll()
-    cl.startLoad()
-    time.sleep(60)
-    cl.stopLoad()
+    try:
+        cl.deleteAll()
+        cl.startLoad()
+        time.sleep(60)
+        cl.stopLoad()
+    except KeyboardInterrupt:
+        cl.stopLoad()
+        raise
     
