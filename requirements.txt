@@ -1,3 +1,4 @@
+docker-py
 python-consul
 python-etcd
 PyYAML==3.12

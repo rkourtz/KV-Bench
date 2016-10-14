@@ -1,5 +1,7 @@
+config.json
 .project
 .pydevproject
 .vagrant/
 python
 src
+

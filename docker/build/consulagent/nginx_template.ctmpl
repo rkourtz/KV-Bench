@@ -1,0 +1,4 @@
+I am {{env "HOSTNAME"}} at {{env "IPADDRESS"}}
+{{range services}}Service {{.Name}}{{range service .Name}}
+  Node {{.Node}} {{.Address}}{{end}}
+{{end}}
