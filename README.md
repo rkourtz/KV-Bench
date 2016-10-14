@@ -15,12 +15,12 @@ service0-0:	172.17.0.3	192.168.33.50	10000
 service0-1:	172.17.0.4	192.168.33.50	10001
 service1-0:	172.17.0.5	192.168.33.50	10100</pre>
 * Make sure they can see each other
-`curl http://192.168.33.50:10100`
+  * `curl http://192.168.33.50:10100`
 <pre>I am service1-0 at 172.17.0.5
 Service consul
-  Node consul0 172.17.0.2
+    Node consul0 172.17.0.2
 Service service0
-  Node service0-0 172.17.0.3
-  Node service0-1 172.17.0.4
+    Node service0-0 172.17.0.3
+    Node service0-1 172.17.0.4
 Service service1
-  Node service1-0 172.17.0.5</pre>
+    Node service1-0 172.17.0.5</pre>
