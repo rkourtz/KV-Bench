@@ -52,10 +52,7 @@ Service service0
   Node service0-0 172.17.0.4
   Node service0-1 172.17.0.5
   Node service0-2 172.17.0.6
-
-
 ENVIRONMENT VARIABLES
-
   foo /bar
 </pre>
 * Make sure the haproxy pool is operating correctly
@@ -70,10 +67,7 @@ Service service0
   Node service0-0 172.17.0.4
   Node service0-1 172.17.0.5
   Node service0-2 172.17.0.6
-
-
 ENVIRONMENT VARIABLES
-
   foo /bar
 </pre>
 * Add another service0 and 2 containers of a new service 1
@@ -81,8 +75,10 @@ ENVIRONMENT VARIABLES
 * Verify the new containers show up in haproxy
   * Using a web browser go to `http://192.168.33.50:1936/`
   * `curl http://192.168.33.50:10001`
+* Remove service0
+  * `./service.sh remove $(./service.sh ls service0)`
   
-## Other actions
+## Other stuff you can do
 * To test other KV stores
   * `cd sandbox`
   * `./benchmark.sh etcd`
