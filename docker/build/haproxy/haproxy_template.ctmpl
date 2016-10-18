@@ -1,0 +1,32 @@
+global
+    log /var/log/haproxy.log local0
+    stats timeout 30s
+    maxconn {{with $maxconn:=key "service/haproxy/maxconn"}}{{$maxconn}}{{else}}4096{{end}}
+
+defaults
+    log global
+    option httplog
+    option dontlognull
+    mode http{{range ls "service/haproxy/timeouts"}}
+    timeout {{.Key}} {{.Value}}{{else}}
+    timeout connect 5000
+    timeout client  50000
+    timeout server  50000{{end}}
+
+{{range $i,$a:=services}}
+frontend {{.Name}}
+    bind *:{{ add 9998 $i }}
+    default_backend {{.Name}}{{end}}
+
+{{range $i,$a:=services}}
+backend {{.Name}}
+    mode http
+    balance roundrobin
+    option forwardfor
+    option httpchk HEAD / HTTP/1.1\r\nHost:localhost{{range service .Name}}
+    server {{.Node}} {{.Address}}:{{.Port}} check{{end}}{{end}}
+
+listen stats *:1936
+    stats enable
+    stats uri /
+    stats hide-version

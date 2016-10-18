@@ -1,9 +1,10 @@
 import argparse
 import docker
 import json
+import re
 import subprocess
 import sys
-from docker.client import Client
+from terminaltables import AsciiTable
 
 
 class main(object):
@@ -30,7 +31,8 @@ class main(object):
             containers = containers + client.containers(all=all)
         return containers
 
-    def ls(self):
+    def ls(self, args = None):
+        print args
         containers = {}
         for container in cls.containers(all=True):
             for name in container['Names']:
@@ -42,8 +44,15 @@ class main(object):
                         containers[sanitized_name]['ports'].append(
                             str(port['PublicPort']))
                         containers[sanitized_name]['host_ip'] = port['IP']
+        table_data = [["ContainerName", "ContainerIp", "HostIp", "HostFwdPorts"]]
         for name in sorted(containers.keys()):
-            print "%s:\t%s\t%s\t%s" % (name, containers[name]['ip'], containers[name]['host_ip'], ", ".join(containers[name]['ports']))
+            if args == None or args.regex == None or re.match(args.regex, name):  
+                if args == None or not args.quiet:
+                    table_data.append([name, containers[name]['ip'], containers[name]['host_ip'], ", ".join(sorted(containers[name]['ports']))])
+                else:
+                    print name
+        if args == None or not args.quiet:
+            print AsciiTable(table_data).table
 
     def start_service_container(self, serviceid, image="consulagent:latest", command=None):
         if not isinstance(serviceid, int):
@@ -63,13 +72,13 @@ class main(object):
         least_loaded_client = self.clients[0]
         for client in self.clients:
             if len(client.containers(all=True)) < len(least_loaded_client.containers(all=True)):
-                least_loaded_client = Client
+                least_loaded_client = client
         if len(services[serviceid]) == 0:
             container_id = 0
         else:
             container_id = max(services[serviceid]) + 1
         container_name = "service%i-%i" % (serviceid, container_id)
-        service_base_port = 10000 + serviceid * 100 + container_id
+        service_base_port = 20000 + serviceid * 100 + container_id
         host_ip = least_loaded_client.base_url.split(":")[1].strip("//")
         host_port_dict = {80: (host_ip, service_base_port)}
         host_config = least_loaded_client.create_host_config(
@@ -110,6 +119,8 @@ if __name__ == "__main__":
         "--debug", dest="debug", action="store_true", help="Verbosity", default=False)
     subparsers = parser.add_subparsers(dest="action")
     list_parser = subparsers.add_parser('ls', help='List running containers')
+    list_parser.add_argument('-q', '--quiet', dest="quiet", action="store_true", help="Output only the container names")
+    list_parser.add_argument('regex', nargs='?', help="Only show hosts matching this regex [optional]")
     start_parser = subparsers.add_parser(
         'start', help='start containers of some service')
     start_parser.add_argument('services', nargs='+')
@@ -127,4 +138,4 @@ if __name__ == "__main__":
             cls.remove_container(name)
     else:
         # ls
-        cls.ls()
+        cls.ls(args)

@@ -1,4 +1,10 @@
+<pre>
 I am {{env "HOSTNAME"}} at {{env "IPADDRESS"}}
 {{range services}}Service {{.Name}}{{range service .Name}}
   Node {{.Node}} {{.Address}}{{end}}
 {{end}}
+
+ENVIRONMENT VARIABLES
+{{range tree "env"}}
+  {{.Key}} {{.Value}}{{end}}
+</pre>
