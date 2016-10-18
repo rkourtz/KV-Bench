@@ -67,6 +67,7 @@ class main(object):
                 host_ip = client.base_url.split(":")[1].strip("//")
                 for port in consul_ports:
                     host_port_dict[port] = (host_ip, port)
+                host_port_dict["8600/udp"] = (host_ip, 8600)
                 if len(self.consul_addresses) == 0:
                     command = "agent -ui -server -bind 0.0.0.0 -bootstrap-expect=%i -client 0.0.0.0" % len(
                         self.clients)
